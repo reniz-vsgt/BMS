@@ -2,6 +2,7 @@
   "name": "ble-project",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://reniz-vsgt.github.io/BMS",
   "dependencies": {
     "@capacitor/app": "5.0.7",
     "@capacitor/core": "5.7.4",
@@ -28,7 +29,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build" 
   },
   "eslintConfig": {
     "extends": [
