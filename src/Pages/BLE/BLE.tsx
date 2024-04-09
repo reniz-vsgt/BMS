@@ -75,11 +75,11 @@ const BLE: React.FC<IBleProps> = ({
     }
 
 
-    useEffect(() => {
-        if (device != null) {
-            readCharacteristic()
-        }
-    }, [device]);
+    // useEffect(() => {
+    //     if (device != null) {
+    //         readCharacteristic()
+    //     }
+    // }, [device]);
 
 
     const connectToDevice = async () => {
@@ -108,7 +108,10 @@ const BLE: React.FC<IBleProps> = ({
                     <Space wrap={true} size="large">
                         <Button type="primary" size={'large'} onClick={connectToDevice}>Connect to Device</Button>
                         {device != null ? (
-                            <Button type="primary" size={'large'} onClick={stopTimer}>Stop Reading</Button>
+                            <>
+                                <Button type="primary" size={'large'} onClick={readCharacteristic}>Start Reading</Button>
+                                <Button type="primary" size={'large'} onClick={stopTimer}>Stop Reading</Button>
+                            </>
                         ) : null}
                     </Space>
                     {device && <p>Connected to device: {device.name}</p>}
