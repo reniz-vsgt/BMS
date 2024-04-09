@@ -38,7 +38,7 @@ const Memory: React.FC<IBleProps> = ({
 
     useEffect(() => {
         if (characteristicValue) {
-            setFinalData(finalData=> [...finalData, characteristicValue])
+            setFinalData(finalData => [...finalData, characteristicValue])
         }
 
     }, [characteristicValue]);
@@ -68,9 +68,14 @@ const Memory: React.FC<IBleProps> = ({
             const service = await device.gatt?.connect();
             if (service) {
                 const Service = await service.getPrimaryService(writeService);
+                console.log(Service, "------------> Service");
+                
                 const characteristic: any = await Service.getCharacteristic(writeChar);
+                console.log(characteristic, "------------> characteristic");
+                console.log(newValue, "------------> new Value");
+                console.log(new TextEncoder().encode(newValue), "------------> hex Value");
                 await characteristic?.writeValue(new TextEncoder().encode(newValue));
-
+                
             }
 
         } catch (error) {
@@ -90,7 +95,6 @@ const Memory: React.FC<IBleProps> = ({
         try {
             const service = await device.gatt?.connect();
             if (service) {
-                // await writeCharacteristic(writeValue)
                 const Service = await service.getPrimaryService(readService);
                 const characteristic = await Service.getCharacteristic(readChar);
                 try {
@@ -98,12 +102,19 @@ const Memory: React.FC<IBleProps> = ({
                         const data = new Uint8Array(val.value?.buffer || new ArrayBuffer(0));
                         var string = new TextDecoder().decode(data);
                         const arr = string.split(',');
-                        setCharacteristicValue(arr);
+                        if (characteristicValue[5] == arr[5]) {
+                            // pass
+                        }
+                        else {
+                            setCharacteristicValue(arr);
+                        }
                     })
                 }
                 catch (error) {
-                    alert("Device disconnected")
                     console.error('Failed to read data:', error);
+                    console.log("Error in start");
+                    
+                    alert("Device disconnected")
                 }
             }
 
