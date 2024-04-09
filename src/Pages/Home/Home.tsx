@@ -3,6 +3,7 @@ import { Divider, Layout, Menu, Space } from 'antd';
 import Logo from './logo2.png'
 import { Image } from 'antd';
 import BLE from '../BLE/BLE';
+import Memory from '../Memory/Memory';
 
 
 
@@ -17,7 +18,7 @@ const Home: React.FC = () => {
         readChar: "6e400003-b5a3-f393-e0a9-e50e24dcca9e",
         writeService: "dd8c1300-3ae2-5c42-b8be-96721cd710fe",
         writeChar: "dd8c1302-3ae2-5c42-b8be-96721cd710fe",
-        speed: 10,
+        speed: 250,
         writeValue: '03',
         message: "Read data as stream"
     }
@@ -27,7 +28,7 @@ const Home: React.FC = () => {
         readChar: "6e400003-b5a3-f393-e0a9-e50e24dcca9f",
         writeService: "dd8c1400-3ae2-5c42-b8be-96721cd710fe",
         writeChar: "dd8c1401-3ae2-5c42-b8be-96721cd710fe",
-        speed: 10,
+        speed: 100,
         writeValue: '03',
         message: "Read data from memory"
     }
@@ -89,7 +90,7 @@ const Home: React.FC = () => {
                         message={stream.message}
                     />
                 ) : (
-                    <BLE
+                    <Memory
                         readService={memory.readService}
                         readChar={memory.readChar}
                         writeService={memory.writeService}
