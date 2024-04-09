@@ -117,7 +117,7 @@ const BLE: React.FC<IBleProps> = ({
                             <Title level={3}> Date Time : {unixToTimestamp(characteristicValue[0])}  </Title>
                             <Title level={3}> Battery Voltage : {characteristicValue[1]} V </Title>
                             <Title level={3}> Battery Current : {characteristicValue[2]} Amp </Title>
-                            <Title level={3}> Battery Temprature 1 : {characteristicValue[3]} °F </Title>
+                            <Title level={3}> Battery Temprature 1 : {characteristicValue[3]} °C </Title>
                             <Title level={3}> Battery Temprature 2 : {characteristicValue[4]} °F </Title>
                             <Title level={3}> Counter : {characteristicValue[5]} </Title>
                         </>

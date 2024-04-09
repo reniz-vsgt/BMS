@@ -114,7 +114,7 @@ const Memory: React.FC<IBleProps> = ({
     };
 
     const download = (data: string[][], fileName: string) => {
-        let csvContent = "data:text/csv;charset=utf-8," + ["Data Provided by Thermoniks"] + "\n" + ["Device : " + device?.name, "Company Name : " + name, "Driver Name : " + driver] + "\n" + ["Date", "Time", "Battery Voltage (V)", "Battery Current (Amps)", "Battery Temprature 1 (C)", "Battery Temprature 2 (C)", "Counter"] + data.join("\n");
+        let csvContent = "data:text/csv;charset=utf-8," + ["Data Provided by Thermoniks"] + "\n" + ["Device : " + device?.name, "Company Name : " + name, "Driver Name : " + driver] + "\n" + ["Date", "Time", "Battery Voltage (V)", "Battery Current (Amps)", "Battery Temprature 1 (C)", "Battery Temprature 2 (F)", "Counter"] + data.join("\n");
         var encodedUri = encodeURI(csvContent);
         var link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -179,7 +179,7 @@ const Memory: React.FC<IBleProps> = ({
                             <Title level={3}> Battery Voltage : {characteristicValue[1]} V </Title>
                             <Title level={3}> Battery Current : {characteristicValue[2]} Amp </Title>
                             <Title level={3}> Battery Temprature 1 : {characteristicValue[3]} °C </Title>
-                            <Title level={3}> Battery Temprature 2 : {characteristicValue[4]} °C </Title>
+                            <Title level={3}> Battery Temprature 2 : {characteristicValue[4]} °F </Title>
                             <Title level={3}> Counter : {characteristicValue[5]} </Title>
                         </>
                     }
