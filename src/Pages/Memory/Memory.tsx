@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { BluetoothDevice, IBleProps, RequestDeviceOptions } from './Memory.types';
+import React, { useState } from 'react';
+import { BluetoothDevice, BluetoothRemoteGATTCharacteristic, BluetoothRemoteGATTServer, IBleProps, RequestDeviceOptions } from './Memory.types';
 import { Space, Typography, Button, Input, Modal, Form } from 'antd';
 import { Layout } from 'antd';
+import { hourglass } from 'ldrs'
+
+
+hourglass.register()
+
+
 
 
 const { Title } = Typography;
@@ -16,42 +22,54 @@ const contentStyle: React.CSSProperties = {
 
 
 const Memory: React.FC<IBleProps> = ({
-    readService,
-    readChar,
-    writeService,
-    writeChar,
+    readService: readServiceUUID,
+    readChar: readCharUUID,
+    writeService: writeServiceUUID,
+    writeChar: writeCharUUID,
     speed,
     writeValue,
     message
 }) => {
 
     const [device, setDevice] = useState<BluetoothDevice | null>(null);
-    const [characteristicValue, setCharacteristicValue] = useState<any>('');
-    const [finalData, setFinalData] = useState<string[][]>([[]]);
-    const [intervalId, setIntervalId] = useState<NodeJS.Timer>()
+    const [finalData, setFinalData] = useState<string>("\n");
+    const [loader, setLoader] = useState<boolean>(false)
     const [name, setName] = useState<string>("")
     const [driver, setDriver] = useState<string>("")
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    const [service, setService] = useState<BluetoothRemoteGATTServer | undefined>();
+
+    const [writeChar, setWriteChar] = useState<BluetoothRemoteGATTCharacteristic>();
+
+    const [readChar, setReadChar] = useState<BluetoothRemoteGATTCharacteristic>();
 
 
-
-    useEffect(() => {
-        if (characteristicValue) {
-            setFinalData(finalData => [...finalData, characteristicValue])
-        }
-
-    }, [characteristicValue]);
 
     const connectToDevice = async () => {
         try {
             const options: RequestDeviceOptions = {
-                acceptAllDevices: true,
-                optionalServices: [readService, writeService],
+                filters: [
+                    {
+                        namePrefix: "MB"
+                    }
+                ],
+                optionalServices: [readServiceUUID, writeServiceUUID],
             };
             const device = await (navigator as any).bluetooth.requestDevice(options);
-
             setDevice(device);
+
+            const service = await device.gatt?.connect();
+            setService(service);
+
+            const readService = await service.getPrimaryService(readServiceUUID);
+            const readChar = await readService.getCharacteristic(readCharUUID);
+            setReadChar(readChar)
+
+            const writeService = await service.getPrimaryService(writeServiceUUID);
+            const writeChar = await writeService.getCharacteristic(writeCharUUID);
+            setWriteChar(writeChar)
+
         } catch (error) {
             console.error('Failed to connect:', error);
         }
@@ -65,17 +83,11 @@ const Memory: React.FC<IBleProps> = ({
             return;
         }
         try {
-            const service = await device.gatt?.connect();
             if (service) {
-                const Service = await service.getPrimaryService(writeService);
-                console.log(Service, "------------> Service");
-                
-                const characteristic: any = await Service.getCharacteristic(writeChar);
-                console.log(characteristic, "------------> characteristic");
-                console.log(newValue, "------------> new Value");
-                console.log(new TextEncoder().encode(newValue), "------------> hex Value");
-                await characteristic?.writeValue(new TextEncoder().encode(newValue));
-                
+                console.log("Trying to write value : ", newValue);
+
+                await writeChar?.writeValue(new TextEncoder().encode(newValue));
+                console.log("Value written successfully!!! : ", newValue);
             }
 
         } catch (error) {
@@ -93,27 +105,21 @@ const Memory: React.FC<IBleProps> = ({
             return;
         }
         try {
-            const service = await device.gatt?.connect();
             if (service) {
-                const Service = await service.getPrimaryService(readService);
-                const characteristic = await Service.getCharacteristic(readChar);
                 try {
-                    characteristic.startNotifications().then((val) => {
-                        const data = new Uint8Array(val.value?.buffer || new ArrayBuffer(0));
-                        var string = new TextDecoder().decode(data);
-                        const arr = string.split(',');
-                        if (characteristicValue[5] == arr[5]) {
-                            // pass
+                    await readChar?.startNotifications();
+                    setLoader(true)
+                    readChar?.addEventListener('characteristicvaluechanged', (event) => {
+                        const val = (event.target as BluetoothRemoteGATTCharacteristic).value?.buffer;
+                        if (val) {
+                            const data = new TextDecoder().decode(val);;
+                            console.log(1, "----------------> data");
+                            setFinalData(finalData => finalData + data + "****")
                         }
-                        else {
-                            setCharacteristicValue(arr);
-                        }
-                    })
+                    });
                 }
                 catch (error) {
                     console.error('Failed to read data:', error);
-                    console.log("Error in start");
-                    
                     alert("Device disconnected")
                 }
             }
@@ -125,7 +131,7 @@ const Memory: React.FC<IBleProps> = ({
     };
 
     const download = (data: string[][], fileName: string) => {
-        let csvContent = "data:text/csv;charset=utf-8," + ["Data Provided by Thermoniks"] + "\n" + ["Device : " + device?.name, "Company Name : " + name, "Driver Name : " + driver] + "\n" + ["Date", "Time", "Battery Voltage (V)", "Battery Current (Amps)", "Battery Temprature 1 (C)", "Battery Temprature 2 (F)", "Counter"] + data.join("\n");
+        let csvContent = "data:text/csv;charset=utf-8," + ["Data Provided by Thermoniks"] + "\n" + ["Device : " + device?.name, "Company Name : " + name, "Driver Name : " + driver] + "\n" + ["Date", "Time", "Battery Voltage (V)", "Battery Current (Amps)", "Battery Temprature 1 (C)", "Battery Temprature 2 (F)", "Counter"] + "\n" + data.join("\n");
         var encodedUri = encodeURI(csvContent);
         var link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -146,24 +152,25 @@ const Memory: React.FC<IBleProps> = ({
     }
 
     const stopTimer = () => {
-        clearInterval(intervalId)
-        setFinalData(([[]]));
-        const newData = finalData.map((e) => {
-            e[0] = unixToTimestamp(e[0]);
-            e.pop();
-            e.join(",")
-            return e
+        setLoader(false)
+        writeCharacteristic("00")
+        const fdata = finalData.split("****")
+        const newData = fdata.map((e) => {
+            const newe = e.split(",")
+            newe[0] = unixToTimestamp(newe[0]);
+            newe.pop();
+            newe.join(",")
+            return newe
         })
+        setFinalData("");
+
         download(newData, "sensor_data.csv")
 
     }
 
     const getData = async () => {
-        const intervalId = setInterval(async () => {
-            await writeCharacteristic(writeValue);
-            readCharacteristic()
-        }, 1000)
-        setIntervalId(intervalId)
+        await writeCharacteristic(writeValue);
+        readCharacteristic()
     }
 
     const handleCancel = () => {
@@ -184,16 +191,21 @@ const Memory: React.FC<IBleProps> = ({
                         <Button type="primary" size={'large'} onClick={stopTimer}>Download File</Button>
                     </Space>
                     {device && <p>Connected to device: {device.name}</p>}
-                    {characteristicValue && characteristicValue.length > 0 &&
-                        <>
-                            <Title level={3}> Date Time : {unixToTimestamp(characteristicValue[0])}  </Title>
-                            <Title level={3}> Battery Voltage : {characteristicValue[1]} V </Title>
-                            <Title level={3}> Battery Current : {characteristicValue[2]} Amp </Title>
-                            <Title level={3}> Battery Temprature 1 : {characteristicValue[3]} °C </Title>
-                            <Title level={3}> Battery Temprature 2 : {characteristicValue[4]} °F </Title>
-                            <Title level={3}> Counter : {characteristicValue[5]} </Title>
-                        </>
-                    }
+                    <br /><br />
+
+                    {loader ? (
+                        <div>
+                            <l-hourglass
+                                size="40"
+                                bg-opacity="0.1"
+                                speed="1.75"
+                                color="#1677FF"
+                            ></l-hourglass>
+                            <br />
+                            <h2>Reading your data from device!!</h2>
+                            <h3>Keep Calm ...</h3>
+                        </div>
+                    ) : null}
                 </Content>
             </Layout>
             <Modal title="Enter Details" open={isModalOpen} footer={null} onCancel={handleCancel}>
@@ -215,5 +227,7 @@ const Memory: React.FC<IBleProps> = ({
 };
 
 export default Memory;
+
+
 
 

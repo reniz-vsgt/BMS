@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { BluetoothDevice, IBleProps, RequestDeviceOptions } from './BLE.types';
+import React, { useState } from 'react';
+import { BluetoothDevice, BluetoothRemoteGATTCharacteristic, BluetoothRemoteGATTServer, IBleProps, RequestDeviceOptions } from './BLE.types';
 import { Space, Typography, Button } from 'antd';
 import { Layout } from 'antd';
+import { dotStream } from 'ldrs'
+
+
+dotStream.register()
 
 
 const { Title } = Typography;
@@ -16,10 +20,10 @@ const contentStyle: React.CSSProperties = {
 
 
 const BLE: React.FC<IBleProps> = ({
-    readService,
-    readChar,
-    writeService,
-    writeChar,
+    readService: readServiceUUID,
+    readChar: readCharUUID,
+    writeService: writeServiceUUID,
+    writeChar: writeCharUUID,
     speed,
     writeValue,
     message
@@ -27,7 +31,10 @@ const BLE: React.FC<IBleProps> = ({
 
     const [device, setDevice] = useState<BluetoothDevice | null>(null);
     const [characteristicValue, setCharacteristicValue] = useState<any>('');
-    const [intervalId, setIntervalId] = useState<NodeJS.Timer>()
+    const [service, setService] = useState<BluetoothRemoteGATTServer | undefined>();
+    const [readChar, setReadChar] = useState<BluetoothRemoteGATTCharacteristic>();
+
+    const [isReading, setIsReading] = useState<boolean>(false)
 
     const readCharacteristic = async () => {
         if (!device) {
@@ -36,24 +43,23 @@ const BLE: React.FC<IBleProps> = ({
             return;
         }
         try {
-            const service = await device.gatt?.connect();
             if (service) {
-                const Service = await service.getPrimaryService(readService);
-                const characteristic = await Service.getCharacteristic(readChar);
                 try {
-                    const intervalId = setInterval(() => {
-                        characteristic.startNotifications().then((val) => {
-                            const data = new Uint8Array(val.value?.buffer || new ArrayBuffer(0));
-                            var string = new TextDecoder().decode(data);
-                            const arr = string.split(',');
+
+                    await readChar?.startNotifications();
+                    readChar?.addEventListener('characteristicvaluechanged', (event) => {
+                        const val = (event.target as BluetoothRemoteGATTCharacteristic).value?.buffer;
+                        if (val) {
+                            const data = new TextDecoder().decode(val);;
+                            const arr = data.split(',');
                             setCharacteristicValue(arr);
-                        })
-                    }, speed)
-                    setIntervalId(intervalId)
+                        }
+                    });
+                    setIsReading(!isReading)
                 }
                 catch (error) {
-                    alert("Device disconnected")
                     console.error('Failed to read data:', error);
+                    alert("Device disconnected")
                 }
             }
 
@@ -74,29 +80,40 @@ const BLE: React.FC<IBleProps> = ({
         }
     }
 
-
-    // useEffect(() => {
-    //     if (device != null) {
-    //         readCharacteristic()
-    //     }
-    // }, [device]);
-
-
     const connectToDevice = async () => {
         try {
             const options: RequestDeviceOptions = {
-                acceptAllDevices: true,
-                optionalServices: [readService, writeService],
+                filters: [
+                    {
+                        namePrefix: "MB"
+                    }
+                ],
+                optionalServices: [readServiceUUID, writeServiceUUID],
             };
             const device = await (navigator as any).bluetooth.requestDevice(options);
             setDevice(device);
+
+            const service = await device.gatt?.connect();
+            setService(service);
+
+            const readService = await service.getPrimaryService(readServiceUUID);
+            const readChar = await readService.getCharacteristic(readCharUUID);
+            setReadChar(readChar)
+
         } catch (error) {
             console.error('Failed to connect:', error);
         }
     };
 
-    const stopTimer = () => {
-        clearInterval(intervalId)
+
+    const stopTimer = async () => {
+        try {
+            await readChar?.stopNotifications();
+            setIsReading(!isReading)
+        } catch (error) {
+            alert("Something went wrong !")
+            window.location.reload();
+        }
     }
 
     return (
@@ -109,8 +126,11 @@ const BLE: React.FC<IBleProps> = ({
                         <Button type="primary" size={'large'} onClick={connectToDevice}>Connect to Device</Button>
                         {device != null ? (
                             <>
-                                <Button type="primary" size={'large'} onClick={readCharacteristic}>Start Reading</Button>
-                                <Button type="primary" size={'large'} onClick={stopTimer}>Stop Reading</Button>
+                                {isReading ? (
+                                        <Button type="primary" size={'large'} onClick={stopTimer}>{"Stop Reading"}</Button>
+                                ) : (
+                                    <Button type="primary" size={'large'} onClick={readCharacteristic}>{"Start Reading"}</Button>
+                                )}
                             </>
                         ) : null}
                     </Space>
