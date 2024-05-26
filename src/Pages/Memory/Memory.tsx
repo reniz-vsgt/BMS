@@ -113,7 +113,7 @@ const Memory: React.FC<IBleProps> = ({
                         const val = (event.target as BluetoothRemoteGATTCharacteristic).value?.buffer;
                         if (val) {
                             const data = new TextDecoder().decode(val);;
-                            console.log(1, "----------------> data");
+                            console.log(data, "----------------> data");
                             setFinalData(finalData => finalData + data + "****")
                         }
                     });
