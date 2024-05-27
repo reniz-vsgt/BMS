@@ -44,6 +44,8 @@ const Memory: React.FC<IBleProps> = ({
 
     const [readChar, setReadChar] = useState<BluetoothRemoteGATTCharacteristic>();
 
+    const [isComplete, setisComplete] = useState<boolean>(false);
+
 
 
     const connectToDevice = async () => {
@@ -112,7 +114,11 @@ const Memory: React.FC<IBleProps> = ({
                     readChar?.addEventListener('characteristicvaluechanged', (event) => {
                         const val = (event.target as BluetoothRemoteGATTCharacteristic).value?.buffer;
                         if (val) {
-                            const data = new TextDecoder().decode(val);;
+                            const data = new TextDecoder().decode(val);
+                            if (data === "") {
+                                setisComplete(true)
+                                setLoader(false)
+                            }
                             console.log(data, "----------------> data");
                             setFinalData(finalData => finalData + data + "****")
                         }
@@ -158,7 +164,7 @@ const Memory: React.FC<IBleProps> = ({
         const newData = fdata.map((e) => {
             const newe = e.split(",")
             newe[0] = unixToTimestamp(newe[0]);
-            newe.pop();
+            // newe.pop();
             newe.join(",")
             return newe
         })
@@ -187,8 +193,10 @@ const Memory: React.FC<IBleProps> = ({
                         <Button type="primary" size={'large'} onClick={() => setIsModalOpen(true)}>Enter Details</Button>
                         <Button type="primary" size={'large'} onClick={connectToDevice}>Connect to Device</Button>
                         <Button type="primary" size={'large'} onClick={getData}>Start Reading</Button>
-
-                        <Button type="primary" size={'large'} onClick={stopTimer}>Download File</Button>
+                        {
+                            isComplete &&
+                            <Button type="primary" size={'large'} onClick={stopTimer}>Download File</Button>
+                        }
                     </Space>
                     {device && <p>Connected to device: {device.name}</p>}
                     <br /><br />
