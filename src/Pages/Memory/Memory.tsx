@@ -44,6 +44,9 @@ const Memory: React.FC<IBleProps> = ({
 
     const [readChar, setReadChar] = useState<BluetoothRemoteGATTCharacteristic>();
 
+    const [command, setCommand] = useState<string>("");
+    const [reniz, setReniz] = useState<string>("");
+
     // const [isComplete, setisComplete] = useState<boolean>(false);
 
 
@@ -56,7 +59,7 @@ const Memory: React.FC<IBleProps> = ({
                         namePrefix: "MB"
                     }
                 ],
-                optionalServices: [readServiceUUID, writeServiceUUID],
+                optionalServices: [readServiceUUID, writeServiceUUID, "dd8c1300-3ae2-5c42-b8be-96721cd710fe"],
             };
             const device = await (navigator as any).bluetooth.requestDevice(options);
             setDevice(device);
@@ -164,7 +167,8 @@ const Memory: React.FC<IBleProps> = ({
         const newData = fdata.map((e) => {
             const newe = e.split(",")
             newe[0] = unixToTimestamp(newe[0]);
-            newe.pop();
+            // newe.pop();
+            // newe.pop();
             newe.join(",")
             return newe
         })
@@ -183,6 +187,29 @@ const Memory: React.FC<IBleProps> = ({
         setIsModalOpen(false);
     };
 
+
+
+    const demo = async () => {
+        const value = command
+        const service = await device?.gatt?.connect();
+        const writeService = await service?.getPrimaryService("dd8c1300-3ae2-5c42-b8be-96721cd710fe");
+        const writeChar = await writeService?.getCharacteristic("dd8c1307-3ae2-5c42-b8be-96721cd710fe");
+        console.log("Encoded Format : ", new TextEncoder().encode(value));
+        
+        await writeChar?.writeValue(new TextEncoder().encode(value));
+        console.log("Value Written successfully !! Value : ", value);
+
+        console.log(writeChar, "---------------> writeChar");
+
+        const val = await writeChar?.readValue()       
+        console.log(val, "----------------> read valueeeee");
+        
+        const data = new Uint8Array(val?.buffer || new ArrayBuffer(0));
+        var string = new TextDecoder().decode(data);
+        setReniz(string)
+        console.log("Read data === ", string);
+    }
+
     return (
         <>
 
@@ -194,6 +221,9 @@ const Memory: React.FC<IBleProps> = ({
                         <Button type="primary" size={'large'} onClick={connectToDevice}>Connect to Device</Button>
                         <Button type="primary" size={'large'} onClick={getData}>Start Reading</Button>
                         <Button type="primary" size={'large'} onClick={stopTimer}>Download File</Button>
+
+                        <Button type="primary" size={'large'} onClick={demo}>Test</Button>
+
                     </Space>
                     {device && <p>Connected to device: {device.name}</p>}
                     <br /><br />
@@ -211,6 +241,9 @@ const Memory: React.FC<IBleProps> = ({
                             <h3>Keep Calm ...</h3>
                         </div>
                     ) : null}
+                    {
+                        reniz && <p>Read data: {reniz}</p>
+                    }
                 </Content>
             </Layout>
             <Modal title="Enter Details" open={isModalOpen} footer={null} onCancel={handleCancel}>
@@ -220,6 +253,9 @@ const Memory: React.FC<IBleProps> = ({
                     </Form.Item>
                     <Form.Item label="Driver Name">
                         <Input placeholder="Enter Driver Name" onChange={(e) => setDriver(e.target.value)} />
+                    </Form.Item>
+                    <Form.Item label="Command">
+                        <Input placeholder="Enter Command" onChange={(e) => setCommand(e.target.value)} />
                     </Form.Item>
                     <Form.Item>
                         <Button type="primary" onClick={handleCancel}>Submit</Button>
