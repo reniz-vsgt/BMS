@@ -190,24 +190,32 @@ const Memory: React.FC<IBleProps> = ({
 
 
     const demo = async () => {
-        const value = command
+        console.log("input string : ", command);
+        const commadArray = command.split(",")
+        const uint8 = new Uint8Array(8);
+        for (let index = 0; index < commadArray.length; index++) {
+            uint8[index] = parseInt(commadArray[index]);
+        }
+        // const value = command
         const service = await device?.gatt?.connect();
         const writeService = await service?.getPrimaryService("dd8c1300-3ae2-5c42-b8be-96721cd710fe");
         const writeChar = await writeService?.getCharacteristic("dd8c1307-3ae2-5c42-b8be-96721cd710fe");
-        console.log("Encoded Format : ", new TextEncoder().encode(value));
+        console.log("Encoded Format : ", uint8);
         
-        await writeChar?.writeValue(new TextEncoder().encode(value));
-        console.log("Value Written successfully !! Value : ", value);
-
-        console.log(writeChar, "---------------> writeChar");
-
-        const val = await writeChar?.readValue()       
-        console.log(val, "----------------> read valueeeee");
-        
+        let stringToDisplay = ""
+        await writeChar?.writeValue(uint8);
+        const val = await writeChar?.readValue()
         const data = new Uint8Array(val?.buffer || new ArrayBuffer(0));
-        var string = new TextDecoder().decode(data);
-        setReniz(string)
-        console.log("Read data === ", string);
+        
+        for (let index = 0; index < data.length; index++) {
+            stringToDisplay+= (data[index]);
+        }
+
+        console.log(stringToDisplay, "----------> stringToDisplay");
+
+        // var string = data.toString;
+        setReniz(stringToDisplay)
+        console.log("Read data === ", stringToDisplay);
     }
 
     return (
